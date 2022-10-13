@@ -614,6 +614,7 @@ fn make_config(args: &Args) -> Arc<rustls::ServerConfig> {
         .flag_proto
         .iter()
         .map(|proto| proto.as_bytes().to_vec())
+        .map(rustls::server::AlpnProtocol::new_absolute_protocol)
         .collect::<Vec<_>>();
 
     Arc::new(config)

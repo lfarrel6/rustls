@@ -30,7 +30,7 @@ mod common;
 use crate::common::*;
 
 fn alpn_test_error(
-    server_protos: Vec<Vec<u8>>,
+    server_protos: Vec<rustls::server::AlpnProtocol>,
     client_protos: Vec<Vec<u8>>,
     agreed: Option<&[u8]>,
     expected_error: Option<ErrorFromPeer>,
@@ -56,7 +56,7 @@ fn alpn_test_error(
     }
 }
 
-fn alpn_test(server_protos: Vec<Vec<u8>>, client_protos: Vec<Vec<u8>>, agreed: Option<&[u8]>) {
+fn alpn_test(server_protos: Vec<rustls::server::AlpnProtocol>, client_protos: Vec<Vec<u8>>, agreed: Option<&[u8]>) {
     alpn_test_error(server_protos, client_protos, agreed, None)
 }
 
@@ -66,14 +66,14 @@ fn alpn() {
     alpn_test(vec![], vec![], None);
 
     // server support
-    alpn_test(vec![b"server-proto".to_vec()], vec![], None);
+    alpn_test(vec![b"server-proto".to_vec().into()], vec![], None);
 
     // client support
     alpn_test(vec![], vec![b"client-proto".to_vec()], None);
 
     // no overlap
     alpn_test_error(
-        vec![b"server-proto".to_vec()],
+        vec![b"server-proto".to_vec().into()],
         vec![b"client-proto".to_vec()],
         None,
         Some(ErrorFromPeer::Server(Error::NoApplicationProtocol)),
@@ -81,14 +81,29 @@ fn alpn() {
 
     // server chooses preference
     alpn_test(
-        vec![b"server-proto".to_vec(), b"client-proto".to_vec()],
+        vec![b"server-proto".to_vec().into(), b"client-proto".to_vec().into()],
         vec![b"client-proto".to_vec(), b"server-proto".to_vec()],
         Some(b"server-proto"),
     );
 
+    // partial match
+    alpn_test(
+      vec![rustls::server::AlpnProtocol::new_prefix_protocol(b"custom-proto/".to_vec())],
+      vec![b"custom-proto/1a2b3c".to_vec()],
+      Some(b"custom-proto/1a2b3c")
+    );
+
+    // partial mismatch
+    alpn_test_error(
+      vec![rustls::server::AlpnProtocol::new_prefix_protocol(b"custom-proton".to_vec())],
+      vec![b"custom-proto/1a2b3c".to_vec()],
+      None,
+      Some(ErrorFromPeer::Server(Error::NoApplicationProtocol))
+    );
+
     // case sensitive
     alpn_test_error(
-        vec![b"PROTO".to_vec()],
+        vec![b"PROTO".to_vec().into()],
         vec![b"proto".to_vec()],
         None,
         Some(ErrorFromPeer::Server(Error::NoApplicationProtocol)),

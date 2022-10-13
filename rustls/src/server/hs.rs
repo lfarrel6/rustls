@@ -100,10 +100,15 @@ impl ExtensionProcessing {
                 ));
             }
 
-            cx.common.alpn_protocol = our_protocols
-                .iter()
-                .find(|protocol| their_protocols.contains(&protocol.as_slice()))
-                .cloned();
+            for offered_protocol in our_protocols.iter() {
+              let maybe_matching_proto = offered_protocol.find_match(&their_protocols);
+              if maybe_matching_proto.is_some() {
+                println!("{:?}", &maybe_matching_proto);
+                cx.common.alpn_protocol = maybe_matching_proto;
+                break;
+              }
+            }
+
             if let Some(ref selected_protocol) = cx.common.alpn_protocol {
                 debug!("Chosen ALPN protocol {:?}", selected_protocol);
                 self.exts

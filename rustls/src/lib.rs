@@ -423,6 +423,7 @@ pub use client::{ClientConfig, ClientConnection, ServerName};
 pub mod server {
     pub(crate) mod builder;
     mod common;
+    pub use common::AlpnProtocol;
     pub(crate) mod handy;
     mod hs;
     mod server_conn;

@@ -39,3 +39,63 @@ impl<'a> ActiveCertifiedKey<'a> {
         self.sct_list
     }
 }
+
+#[derive(Clone, Debug)]
+/// Wrapping struct for the definition of an ALPN protocol to support alternate matchers
+pub struct AlpnProtocol {
+  protocol: Vec<u8>,
+  matcher: AlpnProtocolMatcher
+}
+
+impl AlpnProtocol {
+  /// Get raw bytes of ALPN protocol
+  pub fn get_protocol(&self) -> &[u8] {
+    &self.protocol
+  }
+
+  /// Match raw ALPN protocol against list provided in ClientHello message
+  pub fn find_match(&self, client_protocols: &Vec<&[u8]>) -> Option<Vec<u8>> {
+    self.matcher.find_match(self.protocol.as_slice(), client_protocols)
+  }
+
+  /// Constructor for protocols support prefix matching
+  pub fn new_prefix_protocol(protocol: Vec<u8>) -> Self {
+    Self {
+      protocol,
+      matcher: AlpnProtocolMatcher::Prefix
+    }
+  }
+
+  /// Constructor for protocols only supporting the default, absolute match
+  pub fn new_absolute_protocol(protocol: Vec<u8>) -> Self {
+    Self {
+      protocol,
+      matcher: AlpnProtocolMatcher::Absolute
+    }
+  }
+}
+
+impl From<Vec<u8>> for AlpnProtocol {
+  fn from(proto: Vec<u8>) -> Self {
+    Self::new_absolute_protocol(proto)
+  }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+/// Support protocol matching modes
+enum AlpnProtocolMatcher {
+  Absolute,
+  Prefix
+}
+
+impl AlpnProtocolMatcher {
+  /// Perform a match against the supported protocol and the offered protocols from the client
+  fn find_match(&self, offered_protocol: &[u8], client_protocols: &Vec<&[u8]>) -> Option<Vec<u8>> {
+    client_protocols
+      .iter()
+      .find(|&client_proto| match self {
+        Self::Absolute => offered_protocol == *client_proto,
+        Self::Prefix => client_proto.starts_with(offered_protocol)
+      }).map(|&matched_protocol| matched_protocol.to_vec())
+  }
+}

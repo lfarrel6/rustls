@@ -20,6 +20,7 @@ use crate::{conn::Protocol, quic};
 use crate::{sign, CipherSuite};
 
 use super::hs;
+use super::common::AlpnProtocol;
 
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -218,7 +219,7 @@ pub struct ServerConfig {
 
     /// Protocol names we support, most preferred first.
     /// If empty we don't do ALPN at all.
-    pub alpn_protocols: Vec<Vec<u8>>,
+    pub alpn_protocols: Vec<AlpnProtocol>,
 
     /// Supported protocol versions, in no particular order.
     /// The default is all supported versions.
